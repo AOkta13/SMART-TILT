@@ -32,3 +32,7 @@ Aplikasi ini dirancang khusus untuk pasar saham Indonesia (IHSG), lengkap dengan
    pip install -r requirements.txt
    streamlit run app.py
    ```
+   Jika Anda menemui pesan error streamlit is not recognized as an internal or external command, hal ini terjadi karena sistem PATH Python belum terkonfigurasi. Anda dapat mengatasinya dengan menjalankan perintah alternatif berikut:
+    ```bash
+   python -m streamlit run app.py
+   ```
