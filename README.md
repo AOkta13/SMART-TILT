@@ -30,9 +30,9 @@ Aplikasi ini dirancang khusus untuk pasar saham Indonesia (IHSG), lengkap dengan
    git clone https://github.com/AOkta13/SMART-TILT.git
    cd SMART-TILT
    pip install -r requirements.txt
-   streamlit run app.py
-   ```
-   Jika Anda menemui pesan error streamlit is not recognized as an internal or external command, hal ini terjadi karena sistem PATH Python belum terkonfigurasi. Anda dapat mengatasinya dengan menjalankan perintah alternatif berikut:
-    ```bash
    python -m streamlit run app.py
+   ```
+2. **Atau dapat mengakses dari link:**
+   ```bash
+   https://tinyurl.com/Smart-Tilt
    ```
