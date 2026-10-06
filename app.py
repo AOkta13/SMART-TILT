@@ -5,6 +5,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import matplotlib.dates as mdates
+import plotly.graph_objects as go
 
 # ==============================================================================
 # 1. KONFIGURASI HALAMAN & UI/UX CSS
@@ -213,46 +214,65 @@ with tab_optimasi:
             
             st.dataframe(pd.concat([df_display, baris_total, baris_cash], ignore_index=True), hide_index=True, use_container_width=True, height=820)
 
-            # --- F. Render Grafik Matplotlib ---
+            # --- F. Render Grafik Interaktif Plotly ---
             st.write("<br><br>", unsafe_allow_html=True)
-            fig, ax = plt.subplots(figsize=(14, 6))
-            fig.patch.set_facecolor('#0E1117') 
-            ax.set_facecolor('#0E1117')        
-
-            ax.plot(cum_mkt.index, cum_mkt, color='#9E0A0F', linewidth=3, label='IHSG')       
-            ax.plot(cum_port.index, cum_port, color='#2E8B57', linewidth=3, label='PORTFOLIO AKTUAL (5 Thn)') 
-
-            # Konfigurasi Tampilan Sumbu & Grid Grafik
-            ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-            ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2)) 
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%b-%Y'))
-            ax.tick_params(colors='#D3D3D3', labelsize=9)
-            plt.xticks(rotation=45, ha='right')
-            ax.grid(axis='y', linestyle='-', color='#333333', linewidth=1) 
-            ax.grid(axis='x', visible=False)
-            for spine in ['top', 'right', 'left']: ax.spines[spine].set_visible(False)
-            ax.spines['bottom'].set_color('#D3D3D3')
-
-            plt.title('REALIZED PORTOFOLIO VS IHSG', fontsize=16, color='white', pad=20)
-            legend = plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.3), ncol=2, frameon=False, fontsize=11)
-            for text in legend.get_texts(): text.set_color("white")
             
-            plt.tight_layout()
-            st.pyplot(fig)
+            fig = go.Figure()
+
+            # Tambahkan Garis IHSG
+            fig.add_trace(go.Scatter(
+                x=cum_mkt.index, 
+                y=cum_mkt,
+                mode='lines', 
+                name='IHSG',
+                line=dict(color='#9E0A0F', width=3)
+            ))
+
+            # Tambahkan Garis Portfolio
+            fig.add_trace(go.Scatter(
+                x=cum_port.index, 
+                y=cum_port,
+                mode='lines', 
+                name='PORTFOLIO AKTUAL (5 Thn)',
+                line=dict(color='#2E8B57', width=3)
+            ))
+
+            # Konfigurasi Layout & Format Persentase
+            fig.update_layout(
+                title=dict(text="REALIZED PORTOFOLIO VS IHSG", font=dict(size=20)),
+                xaxis=dict(showgrid=False, tickformat="%b-%Y"),
+                yaxis=dict(showgrid=True, tickformat=".0%"),
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+                margin=dict(l=0, r=0, t=50, b=0)
+            )
+
+            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
             # --- G. Render Ringkasan Metrik ---
             st.markdown("---")
-            st.markdown(f"""
-            <div style="color: white; font-size: 16px; line-height: 1.8; width: 33%;">
-                <b>Metric (Based on Realized Allocation)</b><br>
-                Expected Return Portofolio <span style="float:right;">{port_ret * 100:.2f}%</span><br>
-                Volatilitas Portofolio <span style="float:right;">{port_vol * 100:.2f}%</span><br>
-                Sharpe Ratio <span style="float:right;">{port_sharpe:.4f}</span><br>
-                Upside Potential <span style="float:right;">{port_max_gain * 100:.2f}%</span><br>
-                Downside Risk <span style="float:right;">{port_max_loss_calc * 100:.2f}%</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("**Metric (Based on Realized Allocation)**")
 
+            metric_data = {
+                "Indikator": [
+                    "Expected Return Portofolio",
+                    "Volatilitas Portofolio",
+                    "Sharpe Ratio",
+                    "Upside Potential",
+                    "Downside Risk"
+                ],
+                "Nilai": [
+                    f"{port_ret * 100:.2f}%",
+                    f"{port_vol * 100:.2f}%",
+                    f"{port_sharpe:.4f}",
+                    f"{port_max_gain * 100:.2f}%",
+                    f"{port_max_loss_calc * 100:.2f}%"
+                ]
+            }
+
+            df_metrics = pd.DataFrame(metric_data)
+
+            st.dataframe(df_metrics, hide_index=True, use_container_width=True)
 
 # ------------------------------------------------------------------------------
 # TAB 2: SCREENING SAHAM FUNDAMENTAL
@@ -262,8 +282,11 @@ with tab_screening:
     st.write("Gunakan fitur pencarian di bawah, atau arahkan kursor ke judul kolom tabel untuk memunculkan ikon Filter (seperti Excel).")
     
     # Menyiapkan kerangka data awal screening
-    df_screen = df_metrics.reset_index() 
-    df_screen['SECTOR'] = df_screen['TICKER'].map(df_meta['SECTOR']).fillna('Unknown')
+    df_screen = df_metrics.copy() 
+    df_screen['SECTOR'] = df_screen.index.map(df_meta['SECTOR']).fillna('Unknown')
+    df_screen = df_screen.reset_index()
+    if 'TICKER' not in df_screen.columns:
+        df_screen = df_screen.rename(columns={df_screen.columns[0]: 'TICKER'})
     df_screen = df_screen[[col for col in ['RANKING', 'TICKER', 'NAME', 'SECTOR', 'MARKET_CAPITALIZATION', 'EXPECTED_RETURN', 'RISK', 'SHARPE_RATIO', 'MAX_GAIN', 'MAX_LOSS'] if col in df_screen.columns]]
 
     # Konversi desimal menjadi persentase untuk estetika tabel
@@ -285,7 +308,9 @@ with tab_screening:
     st.caption(f"Menampilkan seluruh **{len(df_screen)}** saham yang cocok dengan kriteria pencarian Anda.")
 
     # Konversi ke skala Triliun Rupiah untuk visibilitas tabel rata kanan
-    df_screen['MARKET_CAPITALIZATION'] = df_screen['MARKET_CAPITALIZATION'] / 1_000_000_000_000
+    if 'MARKET_CAPITALIZATION' in df_screen.columns:
+        df_screen['MARKET_CAPITALIZATION'] = df_screen['MARKET_CAPITALIZATION'] / 1_000_000_000_000
+    st.warning(f"Daftar kolom asli dari CSV: {df_screen.columns.tolist()}")
 
     # Eksekusi Render Tabel
     st.dataframe(

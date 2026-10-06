@@ -3,5 +3,6 @@ pandas
 numpy
 scipy
 matplotlib
+plotly
 statsmodels
 openpyxl
