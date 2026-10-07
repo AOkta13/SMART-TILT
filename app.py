@@ -282,12 +282,20 @@ with tab_screening:
     st.write("Gunakan fitur pencarian di bawah, atau arahkan kursor ke judul kolom tabel untuk memunculkan ikon Filter (seperti Excel).")
     
     # Menyiapkan kerangka data awal screening
-    df_screen = df_metrics.copy() 
+    df_screen = df_metrics.copy()
+        
+    if df_screen.index.name:
+        df_screen.index.name = str(df_screen.index.name).strip().upper()
+    df_screen.columns = [str(col).strip().upper() for col in df_screen.columns]
+        
     df_screen['SECTOR'] = df_screen.index.map(df_meta['SECTOR']).fillna('Unknown')
+        
     df_screen = df_screen.reset_index()
-    if 'TICKER' not in df_screen.columns:
-        df_screen = df_screen.rename(columns={df_screen.columns[0]: 'TICKER'})
-    df_screen = df_screen[[col for col in ['RANKING', 'TICKER', 'NAME', 'SECTOR', 'MARKET_CAPITALIZATION', 'EXPECTED_RETURN', 'RISK', 'SHARPE_RATIO', 'MAX_GAIN', 'MAX_LOSS'] if col in df_screen.columns]]
+        
+    df_screen = df_screen.rename(columns={df_screen.columns[0]: 'TICKER'})
+    
+    kolom_wajib = ['RANKING', 'TICKER', 'NAME', 'SECTOR', 'MARKET_CAPITALIZATION', 'EXPECTED_RETURN', 'RISK', 'SHARPE_RATIO', 'MAX_GAIN', 'MAX_LOSS']
+    df_screen = df_screen[[col for col in kolom_wajib if col in df_screen.columns]]
 
     # Konversi desimal menjadi persentase untuk estetika tabel
     for col in ['EXPECTED_RETURN', 'RISK', 'MAX_GAIN', 'MAX_LOSS']:
@@ -310,8 +318,7 @@ with tab_screening:
     # Konversi ke skala Triliun Rupiah untuk visibilitas tabel rata kanan
     if 'MARKET_CAPITALIZATION' in df_screen.columns:
         df_screen['MARKET_CAPITALIZATION'] = df_screen['MARKET_CAPITALIZATION'] / 1_000_000_000_000
-    st.warning(f"Daftar kolom asli dari CSV: {df_screen.columns.tolist()}")
-
+    
     # Eksekusi Render Tabel
     st.dataframe(
         df_screen, use_container_width=True, hide_index=True, height=700,
